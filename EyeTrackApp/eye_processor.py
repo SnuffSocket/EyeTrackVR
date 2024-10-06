@@ -87,7 +87,6 @@ class EyeProcessor:
         self.main_config = EyeTrackSettingsConfig
         self.config = config
         self.settings = settings
-        self.eye_id = eye_id
         # Cross-thread communication management
         self.capture_queue_incoming = capture_queue_incoming
         self.image_queue_outgoing = image_queue_outgoing
