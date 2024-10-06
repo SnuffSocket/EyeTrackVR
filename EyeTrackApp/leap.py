@@ -139,7 +139,7 @@ class LEAP_C:
             calib_array = np.array([per, per]).reshape(1, 2)
             per = self.one_euro_filter_float(calib_array)[0][0]
 
-            if per <= 0.25:
+            if per <= 0.1:
                 per = 0.0
 
             return imgvis, float(x), float(y), per
