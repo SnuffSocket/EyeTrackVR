@@ -55,7 +55,7 @@ class AsyncCall(object):
 
     def wait(self, timeout=None):
         self.Thread.join(timeout)
-        if self.Thread.isAlive():
+        if self.Thread.is_alive():
             raise TimeoutError()
         else:
             return self.Result
