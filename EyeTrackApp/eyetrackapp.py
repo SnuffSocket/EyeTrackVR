@@ -242,7 +242,7 @@ def main():
                 )
                 try:
                     if is_nt:
-                        cwd = os.getcwd()
+                        #cwd = os.getcwd()
                         # icon = cwd + "\Images\logo.ico"
                         icon = resource_path("Images/logo.ico")
                         toast = Notification(
@@ -256,7 +256,7 @@ def main():
                             launch="https://github.com/RedHawk989/EyeTrackVR/releases/latest",
                         )
                         toast.show()
-                except Exception as e:
+                except Exception:
                     print("[INFO] Toast notifications not supported")
     except:
         print("\033[91m[INFO] Could not check for updates. Please try again later.\033[0m")
