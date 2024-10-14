@@ -37,15 +37,13 @@ import psutil
 import sys
 import os
 
-process = psutil.Process(os.getpid())  # set process priority to low
+process = psutil.Process(os.getpid())   # Set "UNIX" thread / "WIN" process priority
 try:  # medium chance this does absolutely nothing but eh
     sys.getwindowsversion()
 except AttributeError:
-    process.nice(0)  # UNIX: 0 low 10 high
-    process.nice()
+    process.nice(0)  # UNIX: 20:Low, 0:Default, -20:High
 else:
-    process.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # Windows
-    process.nice()
+    process.nice(psutil.NORMAL_PRIORITY_CLASS)  # Windows: Sets process priority. If not "NORMAL" just needless scheduler overhead?!
 
 # from line_profiler_pycharm import profile
 
