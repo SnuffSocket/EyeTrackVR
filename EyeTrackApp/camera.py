@@ -39,16 +39,13 @@ import psutil, os
 import sys
 
 
-process = psutil.Process(os.getpid())  # set process priority to low
+process = psutil.Process(os.getpid())   # Set "UNIX" thread / "WIN" process priority
 try:
     sys.getwindowsversion()
 except AttributeError:
-    process.nice(10)  # UNIX: 0 low 10 high
-    process.nice()
+    process.nice(0)  # UNIX: 20:Low, 0:Default, -20:High
 else:
-    process.nice(psutil.HIGH_PRIORITY_CLASS)  # Windows
-    process.nice()
-    # See https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getpriorityclass#return-value for values
+    process.nice(psutil.NORMAL_PRIORITY_CLASS)  # Windows: Sets process priority. If not "NORMAL" just needless scheduler overhead?!
 
 WAIT_TIME = 0.1
 BUFFER_SIZE = 32768
