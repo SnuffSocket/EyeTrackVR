@@ -219,6 +219,8 @@ class DADDY_cls(object):
         options.intra_op_num_threads = 1  # This number should be changed accordingly
         options.execution_mode = onnxruntime.ExecutionMode.ORT_SEQUENTIAL
         options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
+        options.add_session_config_entry("session.intra_op.allow_spinning", "0")  # ~3% savings worth ~6ms avg latency. Not noticeable at 60fps?
+        options.enable_mem_pattern = False
 
         ort_session = onnxruntime.InferenceSession(
             resource_path(model_file), sess_options=options, providers=["CPUExecutionProvider"]
