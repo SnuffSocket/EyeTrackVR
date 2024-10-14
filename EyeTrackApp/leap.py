@@ -63,6 +63,7 @@ class LEAP_C:
         opts.inter_op_num_threads = 1
         opts.intra_op_num_threads = 1
         opts.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
+        opts.add_session_config_entry("session.intra_op.allow_spinning", "0")  # ~3% savings worth ~6ms avg latency. Not noticeable at 60fps?
         opts.enable_mem_pattern = False
 
         self.one_euro_filter_float = OneEuroFilter(np.random.rand(1, 2), min_cutoff=0.0004, beta=0.9)
