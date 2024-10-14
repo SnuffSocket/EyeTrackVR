@@ -86,10 +86,9 @@ class CameraWidget:
         # Set the event until start is called, otherwise we can block if shutdown is called.
         self.cancellation_event.set()
         self.capture_event = Event()
-        self.capture_queue = Queue()
-        self.roi_queue = Queue()
-
-        self.image_queue = Queue()
+        self.capture_queue = Queue(maxsize=2)
+        self.roi_queue = Queue(maxsize=2)
+        self.image_queue = Queue(maxsize=4)
 
         self.ransac = EyeProcessor(
             self.config,
@@ -103,7 +102,7 @@ class CameraWidget:
             self.osc_queue,
         )
 
-        self.camera_status_queue = Queue()
+        self.camera_status_queue = Queue(maxsize=2)
         self.camera = Camera(
             self.config,
             0,
@@ -362,6 +361,9 @@ class CameraWidget:
             PlaySound("Audio/start.wav", SND_FILENAME | SND_ASYNC)
 
     def render(self, window, event, values):
+        if self.image_queue.qsize() > 2:
+            with self.image_queue.mutex:
+                self.image_queue.queue.clear()
         changed = False
 
         if self.settings.gui_disable_gui == False:
