@@ -130,8 +130,7 @@ class CameraWidget:
         self.is_mouse_up = True
         self.hover_pos = None
         self.in_roi_mode = False
-        self.movavg_fps_queue = deque(maxlen=120)
-        self.movavg_bps_queue = deque(maxlen=120)
+        self.bps = 0
 
     def get_widget_layout(self):
         self.widget_layout = [
@@ -287,14 +286,12 @@ class CameraWidget:
         self.get_widget_layout()
 
     def _movavg_fps(self, next_fps):
-        self.movavg_fps_queue.append(next_fps)
-        fps = round(sum(self.movavg_fps_queue) / len(self.movavg_fps_queue))
-        millisec = round((1 / fps if fps else 0) * 1000)
-        return f"{fps} Fps {millisec} ms"
+        # next_fps is already averaged
+        return f"{round(next_fps)} Fps {round((1 / next_fps if next_fps else 0) * 1000)} ms"
 
     def _movavg_bps(self, next_bps):
-        self.movavg_bps_queue.append(next_bps)
-        return f"{sum(self.movavg_bps_queue) / len(self.movavg_bps_queue) * 0.001 * 0.001 * 8:.3f} Mbps"
+        self.bps = round(0.02 * next_bps + 0.98 * self.bps)
+        return f"{self.bps * 0.001 * 0.001 * 8:.3f} Mbps"
 
     def _cartesian_to_polar(self):
         if not (self.xy0 is None or self.xy1 is None):
