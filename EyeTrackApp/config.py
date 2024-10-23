@@ -323,7 +323,7 @@ class EyeTrackConfig(BaseModel):
         #print(f"\033[92m[INFO] Config Saved Successfully\033[0m")
 
     def register_listener_callback(self, callback):
-        print(f"[DEBUG] Registering listener {callback}")
+        #print(f"[DEBUG] Registering listener {callback}")
         self.__listeners.append(callback)
 
     def __notify_listeners(self, data: dict):
