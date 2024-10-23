@@ -254,12 +254,13 @@ class Camera:
         return False
 
     def get_serial_camera_picture(self, should_push):
+        conn = self.serial_connection
         # Stop spamming "Serial capture source problem" if connection is lost
-        if self.serial_connection is None or self.camera_status == CameraState.DISCONNECTED:
+        if conn is None or self.camera_status == CameraState.DISCONNECTED:
             return
         try:
-            if self.serial_connection.in_waiting:
-                jpeg = self.get_next_jpeg_frame(self.serial_connection)
+            if conn.in_waiting:
+                jpeg = self.get_next_jpeg_frame(conn)
                 if jpeg:
                     # Create jpeg frame from byte string
                     image = cv2.imdecode(np.fromstring(jpeg, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
@@ -280,14 +281,14 @@ class Camera:
                 # Discard the serial buffer. This is due to the fact that it,
                 # may build up some outdated frames. A bit of a workaround here tbh.
                 # Do this at the end to give buffer time to refill.
-                if self.serial_connection.in_waiting >= BUFFER_SIZE:
-                    print(f"{Fore.CYAN}[INFO] Discarding the serial buffer ({self.serial_connection.in_waiting} bytes){Fore.RESET}")
-                    self.serial_connection.reset_input_buffer()
+                if conn.in_waiting >= BUFFER_SIZE:
+                    print(f"{Fore.CYAN}[INFO] Discarding the serial buffer ({conn.in_waiting} bytes){Fore.RESET}")
+                    conn.reset_input_buffer()
                     self.buffer = b""
 
         except Exception:
             print(f"{Fore.YELLOW}[WARN] Serial capture source problem, assuming camera disconnected, waiting for reconnect.{Fore.RESET}")
-            self.serial_connection.close()
+            conn.close()
             self.camera_status = CameraState.DISCONNECTED
             pass
 
