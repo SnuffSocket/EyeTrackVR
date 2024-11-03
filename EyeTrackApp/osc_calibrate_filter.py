@@ -119,13 +119,9 @@ class var:
 
 @Async
 def center_overlay_calibrate(self):
-    tools = Path("Tools")
     # try:
     if var.overlay_active != True:
-
-        dirname = os.getcwd()
-
-        overlay_path = resource_path(tools / "center.bat")
+        overlay_path = resource_path(tool / "center.bat")
         os.startfile(overlay_path)
         var.overlay_active = True
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
