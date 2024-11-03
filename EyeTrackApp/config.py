@@ -159,7 +159,7 @@ class EyeTrackSettingsConfig(BaseModel):
     gui_RANSAC3DP: int = 6
     gui_BLOBP: int = 7
     gui_LEAPP: int = 8
-    gui_IBO: bool = True
+    gui_IBO: bool = False
     gui_skip_autoradius: bool = False
     gui_thresh_add: int = 11
     gui_update_check: bool = False
@@ -169,6 +169,7 @@ class EyeTrackSettingsConfig(BaseModel):
     ibo_filter_samples: int = 400
     ibo_average_output_samples: int = 0
     ibo_fully_close_eye_threshold: float = 0.3
+    leap_calibration_samples: int = 2000
     calibration_samples: int = 600
     osc_right_eye_close_address: str = "/avatar/parameters/RightEyeLidExpandedSqueeze"
     osc_left_eye_close_address: str = "/avatar/parameters/LeftEyeLidExpandedSqueeze"
