@@ -31,15 +31,11 @@ LICENSE: GNU GPLv3
 import sys
 import asyncio
 import os
-
-os.environ["OMP_NUM_THREADS"] = "1"
-sys.path.append(".")
 from config import EyeTrackCameraConfig
 from config import EyeTrackSettingsConfig
 from pye3d.camera import CameraModel
 from pye3d.detector_3d import Detector3D, DetectorMode
 import queue
-from eye import EyeId
 from osc_calibrate_filter import *
 from daddy import External_Run_DADDY
 from leap import External_Run_LEAP
@@ -53,7 +49,8 @@ from intensity_based_openness import *
 from ellipse_based_pupil_dilation import *
 from AHSF import *
 from osc.OSCMessage import OSCMessageType, OSCMessage
-
+os.environ["OMP_NUM_THREADS"] = "1"
+sys.path.append(".")
 
 def run_once(f):
     def wrapper(*args, **kwargs):
@@ -223,15 +220,6 @@ class EyeProcessor:
 
             rotation_matrix = cv2.getRotationMatrix2D(img_center, self.config.rotation_angle, 1)
 
-            #  rows, cols = self.current_image.shape[:2]
-            #  rotation_matrix = cv2.getRotationMatrix2D((cols / 2, rows / 2), self.config.rotation_angle, 1)
-            # cos_theta = np.abs(rotation_matrix[0, 0])
-            #     sin_theta = np.abs(rotation_matrix[0, 1])
-            #    new_cols = int((cols * cos_theta) + (rows * sin_theta))
-            #   new_rows = int((cols * sin_theta) + (rows * cos_theta))
-            #  rotation_matrix[0, 2] += (new_cols - cols) / 2
-            # rotation_matrix[1, 2] += (new_rows - rows) / 2
-
             matrix = np.matmul(rotation_matrix, crop_matrix)
             self.current_image_white = cv2.warpAffine(
                 self.current_image,
@@ -318,7 +306,7 @@ class EyeProcessor:
                 self.rawx,
                 self.rawy,
                 self.eyeopen,
-            ) = self.er_leap.run(self.current_image_gray, self.current_image_gray_clean, self.calibration_frame_counter, self.settings.leap_calibration_samples)
+            ) = self.er_leap.run(self.current_image_gray, self.current_image_gray_clean, self.calibration_frame_counter)
 
         if len(self.prev_y_list) >= 100:  # "lock" eye when close/blink IN TESTING, kinda broke
             self.prev_y_list.pop(0)
@@ -331,7 +319,6 @@ class EyeProcessor:
         if blink_vec >= 0.18:
             # self.out_x = sum(self.prev_x_list) / len(self.prev_x_list)
             self.out_y = sum(self.prev_y_list) / len(self.prev_y_list)
-        #   print('AVG', self.out_y, len(self.prev_y_list))
 
         if self.settings.gui_pupil_dilation:
             self.pupil_dilation = self.ebpd.intense(
@@ -362,11 +349,6 @@ class EyeProcessor:
             ),
         )
 
-        #    if self.settings.gui_RANSACBLINK and self.eyeopen == 0.0: why is this here
-        #       pass
-        #  else:
-        #     self.eyeopen = 0.81
-
         osc_message = OSCMessage(
             type=OSCMessageType.EYE_INFO,
             data=(
@@ -390,14 +372,12 @@ class EyeProcessor:
     def LEAPM(self):
         self.thresh = self.current_image_gray.copy()
         (self.current_image_gray, self.rawx, self.rawy, self.eyeopen,) = self.er_leap.run(
-            self.current_image_gray, self.current_image_gray_clean, self.calibration_frame_counter, self.settings.leap_calibration_samples
+            self.current_image_gray, self.current_image_gray_clean, self.calibration_frame_counter
         )  # TODO: make own self var and LEAP toggle
         self.thresh = self.current_image_gray.copy()
         # todo: lorow, fix this as well
         self.out_x, self.out_y, self.avg_velocity = cal.cal_osc(self, self.rawx, self.rawy, self.angle)
         self.current_algorithm = EyeInfoOrigin.LEAP
-
-    # print(self.eyeopen)
 
     def DADDYM(self):
         # todo: We should have a proper variable for drawing.
@@ -444,12 +424,7 @@ class EyeProcessor:
         ) = RANSAC3D(self, True)
         if self.settings.gui_RANSACBLINK:  # might be redundant
             self.eyeopen = ranblink
-        #   print("RANBLINK", ranblink)
 
-        # print(self.radius)
-        # if self.prev_x is None:
-        #   self.prev_x = self.rawx
-        #  self.prev_y = self.rawy
         self.out_x, self.out_y, self.avg_velocity = cal.cal_osc(self, self.rawx, self.rawy, self.angle)
         self.current_algorithm = EyeInfoOrigin.HSRAC
 
@@ -480,12 +455,7 @@ class EyeProcessor:
         ) = RANSAC3D(self, True)
         if self.settings.gui_RANSACBLINK:  # might be redundant
             self.eyeopen = ranblink
-        #   print("RANBLINK", ranblink)
 
-        # print(self.radius)
-        # if self.prev_x is None:
-        #   self.prev_x = self.rawx
-        #  self.prev_y = self.rawy
         self.out_x, self.out_y, self.avg_velocity = cal.cal_osc(self, self.rawx, self.rawy, self.angle)
         self.current_algorithm = EyeInfoOrigin.HSRAC
 
@@ -555,7 +525,7 @@ class EyeProcessor:
             self.rawx,
             self.rawy,
             self.radius,
-        ) =  self.er_ahsf.External_Run_AHSF(self, self.current_image_gray)
+        ) =  self.er_ahsf.External_Run_AHSF(self.current_image_gray)
         self.thresh = self.current_image_gray
         self.out_x, self.out_y, self.avg_velocity = cal.cal_osc(self, self.rawx, self.rawy, self.angle)
         self.current_algorithm = EyeInfoOrigin.HSF
@@ -614,8 +584,6 @@ class EyeProcessor:
             self.failed = 0  # we have reached last possible algo and it is disabled, move to first algo
 
     def run(self):
-        # Run the following somewhere
-        # self.daddy = External_Run_DADDY()
 
         self.firstalgo = None
         self.secondalgo = None
@@ -629,8 +597,6 @@ class EyeProcessor:
 
         # clear HSF values when page is opened to correctly reflect setting changes
         self.er_hsf = None
-
-        # algolist[self.settings.gui_HSFP] = self.HSFM
 
         # set algo priorities
         if self.settings.gui_AHSFRAC:
@@ -698,7 +664,7 @@ class EyeProcessor:
 
         if self.settings.gui_LEAP or self.settings.gui_LEAP_lid:
             if self.er_leap is None:
-                self.er_leap = External_Run_LEAP()
+                self.er_leap = External_Run_LEAP(self.config, self.baseconfig)
             algolist[self.settings.gui_LEAP] = self.LEAPM
         else:
             if self.er_leap is not None:
@@ -722,11 +688,8 @@ class EyeProcessor:
             self.eigthalgo,
         ) = algolist
 
-        f = True
         while True:
 
-            # f = True
-            # print(self.capture_queue_incoming.qsize())
             # Check to make sure we haven't been requested to close
             if self.cancellation_event.is_set():
                 print("\033[94m[INFO] Exiting Tracking thread\033[0m")

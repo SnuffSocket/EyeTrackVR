@@ -29,7 +29,6 @@ import PySimpleGUI as sg
 import queue
 import requests
 import threading
-from ctypes import windll, c_int
 from camera_widget import CameraWidget
 from config import EyeTrackConfig
 from eye import EyeId
@@ -43,17 +42,17 @@ import cv2
 import numpy as np
 import uuid
 
+winmm = None
 
 if is_nt:
     from winotify import Notification
+    from ctypes import windll, c_int
+    try:
+        winmm = windll.winmm
+    except OSError:
+        print("\033[91m[WARN] Failed to load winmm.dll\033[0m")
 os.system("color")  # init ANSI color
 
-winmm = None
-try:
-    winmm = windll.winmm
-except OSError:
-    #print("[WARN] Failed to load winmm.dll")
-    pass
 
 # Random environment variable to speed up webcam opening on the MSMF backend.
 # https://github.com/opencv/opencv/issues/17687
@@ -217,7 +216,7 @@ def timerResolution(toggle):
             rc = c_int(winmm.timeBeginPeriod(1))
             if rc.value != 0:
                 # TIMEERR_NOCANDO = 97
-                print(f"[WARN] Failed to set timer resolution: {rc.value}")
+                print(f"\033[93m[WARN] Failed to set timer resolution: {rc.value}\033[0m")
         else:
             winmm.timeEndPeriod(1)
 
@@ -303,7 +302,8 @@ def main():
     osc_manager.start()
 
     while True:
-
+        tint = 33
+        fs = False
         if config.settings.gui_disable_gui:
             layoutg = [
                 [sg.Text("GUI Disabled!", background_color="#242224")],
@@ -315,7 +315,7 @@ def main():
 
             # Event loop
             while True:
-                eventg, valuesg = windowg.read(timeout=33)
+                eventg, valuesg = windowg.read(timeout=tint)
 
                 if eventg == sg.WINDOW_CLOSED:
                     config.settings.gui_disable_gui = False
@@ -333,8 +333,7 @@ def main():
         # First off, check for any events from the GUI
         window = create_window(config, settings, eyes)
         
-        tint = 33
-        fs = False
+
         while True:
             event, values = window.read(timeout=tint) # this higher timeout saves some cpu usage
 

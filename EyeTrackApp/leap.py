@@ -6,6 +6,7 @@ import time
 import math
 from queue import Queue
 import threading
+from config import EyeTrackCameraConfig, EyeTrackConfig
 from one_euro_filter import OneEuroFilter
 import psutil
 from utils.misc_utils import resource_path
@@ -42,7 +43,7 @@ def run_onnx_model(queues, session, frame):
 
 
 class LEAP_C:
-    def __init__(self):
+    def __init__(self, eye_config: EyeTrackCameraConfig, config: EyeTrackConfig):
         self.last_lid = None
         self.current_image_gray = None
         self.current_image_gray_clean = None
@@ -79,6 +80,8 @@ class LEAP_C:
         self.old_per = 0.0
         self.delta_per_neg = 0.0
         self.ort_session1 = onnxruntime.InferenceSession(self.model_path, opts, providers=["CPUExecutionProvider"])
+        self.eye_config: EyeTrackCameraConfig = eye_config
+        self.config: EyeTrackConfig = config
 
         for i in range(self.num_threads):
             thread = threading.Thread(
@@ -112,21 +115,22 @@ class LEAP_C:
             d2 = math.dist(pre_landmark[2], pre_landmark[4])
             d = (d1 + d2) / 2
 
-         #   if len(self.openlist) > 0 and d >= np.percentile(self.openlist, 80) and len(self.openlist) < self.calibration_samples:
-           #     self.maxlist.append(d)
-
-
-            normal_open = np.percentile(self.openlist, 90) if len(self.openlist) >= 10 else 0.8
-
             if self.calib == 0:
                 self.openlist = []
+                self.eye_config.leap_calibrated = False
 
-            if len(self.openlist) < self.calibration_samples:
+            if not self.eye_config.leap_calibrated:
                 self.openlist.append(d)
+                self.eye_config.leap_calibration_percentile_90 = np.percentile(self.openlist, 90) if len(self.openlist) >= 10 else 0.8
+                self.eye_config.leap_calibration_percentile_2 = np.percentile(self.openlist, 2) - self.eye_config.leap_calibration_percentile_90
+                if len(self.openlist) >= self.config.settings.leap_calibration_samples:
+                    self.eye_config.leap_calibrated = True
+                    self.config.save()
+                    print(f"[INFO] {'Left' if self.eye_config is self.config.left_eye else 'Right'} eye calibrated")
 
             try:
-                if len(self.openlist) > 0:
-                    per = (d - normal_open) / (np.percentile(self.openlist, 2) - normal_open)
+                if len(self.openlist) > 0 or self.eye_config.leap_calibrated:
+                    per = (d - self.eye_config.leap_calibration_percentile_90) / self.eye_config.leap_calibration_percentile_2
                     per = 1 - per
                     per = np.clip(per, 0.0, 1.0)
                 else:
@@ -144,20 +148,19 @@ class LEAP_C:
             if per <= 0.1:
                 per = 0.0
 
-            return imgvis, float(x), float(y), per
+            return imgvis, float(x*img_width), float(y*img_height), per
 
         imgvis = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         return imgvis, 0, 0, 0
 
 
 class External_Run_LEAP:
-    def __init__(self):
-        self.algo = LEAP_C()
+    def __init__(self, eye_config: EyeTrackCameraConfig, config: EyeTrackConfig):
+        self.algo = LEAP_C(eye_config, config)
 
-    def run(self, current_image_gray, current_image_gray_clean, calib, calibration_samples):
+    def run(self, current_image_gray, current_image_gray_clean, calib):
         self.algo.current_image_gray = current_image_gray
         self.algo.current_image_gray_clean = current_image_gray_clean
         self.algo.calib = calib
-        self.algo.calibration_samples = calibration_samples
         img, x, y, per = self.algo.leap_run()
         return img, x, y, per
