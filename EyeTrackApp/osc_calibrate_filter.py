@@ -37,9 +37,7 @@ import subprocess
 import math
 from utils.calibration_3d import receive_calibration_data, converge_3d
 from utils.misc_utils import resource_path
-from pathlib import Path
 
-tool = Path("Tools")
 class TimeoutError(RuntimeError):
     pass
 
@@ -122,7 +120,7 @@ def center_overlay_calibrate(self):
     # try:
     if var.overlay_active != True:
         
-        overlay_path = resource_path("tools/ETVR_SteamVR_Calibration_Overlay.exe")
+        overlay_path = resource_path("Tools/ETVR_SteamVR_Calibration_Overlay.exe")
         os.startfile(overlay_path, arguments="center")
         var.overlay_active = True
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -146,7 +144,7 @@ def center_overlay_calibrate(self):
 def overlay_calibrate_3d(self):
     try:
         if var.overlay_active != True:
-            overlay_path = resource_path("tools/EyeTrackVR-Overlay.exe")
+            overlay_path = resource_path("Tools/EyeTrackVR-Overlay.exe")
             os.startfile(overlay_path)
             var.overlay_active = True
             while var.overlay_active:
