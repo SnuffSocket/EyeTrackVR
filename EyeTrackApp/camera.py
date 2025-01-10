@@ -262,7 +262,7 @@ class Camera:
                 jpeg = self.get_next_jpeg_frame(conn)
                 if jpeg:
                     # Create jpeg frame from byte string
-                    image = cv2.imdecode(np.fromstring(jpeg, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+                    image = cv2.imdecode(np.frombuffer(jpeg, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
                     if image is None:
                         print(f"{Fore.YELLOW}[WARN] Frame drop. Corrupted JPEG.{Fore.RESET}")
                         return
