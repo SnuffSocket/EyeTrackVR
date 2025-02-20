@@ -19,8 +19,8 @@
                                        @@@@@@@@@@@@@@@@@
                                       @@@@@@@@@@@@@(
 
-Copyright (c) 2023 EyeTrackVR <3
-LICENSE: GNU GPLv3
+Copyright (c) 2025 EyeTrackVR <3
+LICENSE: Babble Software Distribution License 1.0
 ------------------------------------------------------------------------------------------------------
 """
 
@@ -345,11 +345,12 @@ class CameraWidget:
             self.start()
 
     def recenter_eyes(self, osc_message: OSCMessage):
-        if osc_message.data is not bool:
+        if not isinstance(osc_message.data,bool):
             return  # just incase we get anything other than bool
+        self.settings.gui_recenter_eyes = True
 
     def recalibrate_eyes(self, osc_message: OSCMessage):
-        if osc_message.data is not bool:
+        if not isinstance(osc_message.data,bool):
             return  # just incase we get anything other than bool
 
         if osc_message.data:

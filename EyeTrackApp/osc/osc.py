@@ -19,8 +19,8 @@
                                        @@@@@@@@@@@@@@@@@
                                       @@@@@@@@@@@@@(
 
-Copyright (c) 2023 EyeTrackVR <3
-LICENSE: GNU GPLv3
+Copyright (c) 2025 EyeTrackVR <3
+LICENSE: Babble Software Distribution License 1.0
 ------------------------------------------------------------------------------------------------------
 """
 
@@ -38,7 +38,6 @@ from osc.VRCFTModuleMessenger import VRCFTModuleSender
 from osc.VRChatOSCSender import VRChatOSCSender
 import queue
 import threading
-
 
 class OSCManager:
     def __init__(
