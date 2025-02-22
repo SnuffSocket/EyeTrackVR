@@ -1,5 +1,5 @@
 from settings.modules.BaseModule import BaseSettingsModule, BaseValidationModel
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 
 class AdvancedTrackingAlgoSettingsValidationModel(BaseValidationModel):

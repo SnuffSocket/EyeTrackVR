@@ -1,7 +1,7 @@
 from pydantic import model_validator
 
 from settings.modules.BaseModule import BaseSettingsModule, BaseValidationModel
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 
 class TrackingAlgorithmValidationModel(BaseValidationModel):

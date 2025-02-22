@@ -1,6 +1,6 @@
 from typing import Iterable
 
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 from pydantic import AfterValidator
 from typing_extensions import Annotated

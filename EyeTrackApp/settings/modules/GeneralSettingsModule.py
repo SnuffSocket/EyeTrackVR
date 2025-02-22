@@ -1,6 +1,6 @@
 from config import EyeTrackSettingsConfig
 from settings.modules.BaseModule import BaseSettingsModule, BaseValidationModel
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 
 class GeneralSettingsValidationModel(BaseValidationModel):

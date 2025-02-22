@@ -24,7 +24,7 @@ LICENSE: Babble Software Distribution License 1.0
 ------------------------------------------------------------------------------------------------------
 """
 
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 from config import EyeTrackConfig
 from collections import deque
 from threading import Event, Thread

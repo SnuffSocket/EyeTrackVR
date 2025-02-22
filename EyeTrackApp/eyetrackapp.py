@@ -25,7 +25,7 @@ LICENSE: Babble Software Distribution License 1.0
 """
 
 import os
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 import queue
 import requests
 import threading
