@@ -314,7 +314,7 @@ class EllipseBasedPupilDilation:
             if eyedilation < 0:
                 eyedilation = 0.0
 
-        if changed and ((time.time() - self.lct) > 15):  # save every 5 seconds if something changed to save disk usage
+        if changed and ((time.time() - self.lct) > 120):  # save every 2 minutes if something changed to save disk usage
             self.save()
             self.lct = time.time()
 
