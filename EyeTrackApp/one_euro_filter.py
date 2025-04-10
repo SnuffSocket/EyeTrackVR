@@ -33,25 +33,27 @@ class OneEuroFilter:
         try:
             t = time()
             t_e = t - self.t_prev
-            if t_e == 0.0:  # Occasionally when switching to HSF this becomes zero causing divide by zero errors crashing the filter.
-                t_e = 1e-6  # Better than returning "None", that is not handled?!
-            t_e = np.full(x.shape, t_e)
+            if t_e != 0.0: #occasionally when switching to HSF this becomes zero causing divide by zero errors crashing the filter.
+                t_e = np.full(x.shape, t_e)
 
-            # The filtered derivative of the signal.
-            a_d = smoothing_factor(t_e, self.d_cutoff)
-            dx = (x - self.x_prev) / t_e
-            dx_hat = exponential_smoothing(a_d, dx, self.dx_prev)
+                # The filtered derivative of the signal.
+                a_d = smoothing_factor(t_e, self.d_cutoff)
+                dx = (x - self.x_prev) / t_e
+                dx_hat = exponential_smoothing(a_d, dx, self.dx_prev)
 
-            # The filtered signal.
-            cutoff = self.min_cutoff + self.beta * np.abs(dx_hat)
-            a = smoothing_factor(t_e, cutoff)
-            x_hat = exponential_smoothing(a, x, self.x_prev)
+                # The filtered signal.
+                cutoff = self.min_cutoff + self.beta * np.abs(dx_hat)
+                a = smoothing_factor(t_e, cutoff)
+                x_hat = exponential_smoothing(a, x, self.x_prev)
 
-            # Memorize the previous values.
-            self.x_prev = x_hat
-            self.dx_prev = dx_hat
-            self.t_prev = t
+                # Memorize the previous values.
+                self.x_prev = x_hat
+                self.dx_prev = dx_hat
+                self.t_prev = t
 
-            return x_hat
+                return x_hat
+            else:
+                self.x_prev = x
+                return x
         except:
             print("\033[91m[ERROR] One Euro Filter Error. Is your system clock running properly?\033[0m")

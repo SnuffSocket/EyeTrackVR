@@ -344,19 +344,27 @@ class CameraWidget:
             self.stop()
             self.start()
 
-    def recenter_eyes(self, osc_message: OSCMessage):
-        if not isinstance(osc_message.data,bool):
-            return  # just incase we get anything other than bool
+    def recenter_eyes(self):
         self.settings.gui_recenter_eyes = True
 
-    def recalibrate_eyes(self, osc_message: OSCMessage):
-        if not isinstance(osc_message.data,bool):
+    def recalibrate_eyes(self):
+        self.ransac.calibration_frame_counter = self.settings.calibration_samples
+        self.ransac.ibo.clear_filter()
+        PlaySound(resource_path("Audio/start.wav"), SND_FILENAME | SND_ASYNC)
+
+    def osc_recenter_eyes(self, osc_message: OSCMessage):
+        if not isinstance(osc_message.data, bool):
             return  # just incase we get anything other than bool
 
         if osc_message.data:
-            self.ransac.ibo.clear_filter()
-            self.ransac.calibration_frame_counter = self.config.calibration_samples
-            PlaySound("Audio/start.wav", SND_FILENAME | SND_ASYNC)
+            self.recenter_eyes()
+
+    def osc_recalibrate_eyes(self, osc_message: OSCMessage):
+        if not isinstance(osc_message.data, bool):
+            return  # just incase we get anything other than bool
+
+        if osc_message.data:
+            self.recalibrate_eyes()
 
     def render(self, window, event, values):
         if self.image_queue.qsize() > 2:
@@ -380,6 +388,7 @@ class CameraWidget:
                             len(values[self.gui_camera_addr]) > 5
                             and "http" not in values[self.gui_camera_addr]
                             and ".mp4" not in values[self.gui_camera_addr]
+                            and "/dev" not in values[self.gui_camera_addr]
                         ):  # If http is not in camera address, add it.
                             self.config.capture_source = f"http://{values[self.gui_camera_addr]}/"
                         else:
@@ -454,15 +463,13 @@ class CameraWidget:
                             self.hover_pos = None
 
             if event == self.gui_restart_calibration:
-                self.ransac.calibration_frame_counter = self.settings.calibration_samples
-                self.ransac.ibo.clear_filter()
-                PlaySound(resource_path("Audio/start.wav"), SND_FILENAME | SND_ASYNC)
+                self.recalibrate_eyes()
 
             if event == self.gui_stop_calibration:
                 self.ransac.calibration_frame_counter = 0
 
             if event == self.gui_recenter_eyes:
-                self.settings.gui_recenter_eyes = True
+                self.recenter_eyes()
 
             needs_roi_set = self.config.roi_window_h <= 0 or self.config.roi_window_w <= 0
 
