@@ -145,7 +145,9 @@ class Camera:
                     ):
                         port = self.config.capture_source
                         self.current_capture_source = port
-                        self.start_serial_connection(port)
+                        if self.start_serial_connection(port):
+                            time.sleep(0.3)
+                            continue
                 else:
                     if (
                         self.cv2_camera is None
@@ -294,13 +296,13 @@ class Camera:
         if self.serial_connection is not None and self.serial_connection.is_open:
             # Do nothing. The connection is already open on this port.
             if self.serial_connection.port == port:
-                return
+                return False
             # Otherwise, close the connection before trying to reopen.
             self.serial_connection.close()
         com_ports = [tuple(p) for p in list(serial.tools.list_ports.comports())]
         # Do not try connecting if no such port i.e. device was unplugged.
         if not any(p for p in com_ports if port in p):
-            return
+            return True
         try:
             rate = 115200 if sys.platform == "darwin" else 3000000  # Higher baud rate not working on macOS
             conn = serial.Serial(baudrate=rate, port=port, xonxoff=False, dsrdtr=False, rtscts=False)
@@ -310,9 +312,11 @@ class Camera:
             print(f"{Fore.CYAN}[INFO] ETVR Serial Tracker device connected on {port}{Fore.RESET}")
             self.serial_connection = conn
             self.camera_status = CameraState.CONNECTED
+            return False
         except Exception:
             print(f"{Fore.CYAN}[INFO] Failed to connect on {port}{Fore.RESET}")
             self.camera_status = CameraState.DISCONNECTED
+            return True
 
     def push_image_to_queue(self, image, frame_number, fps):
         # If there's backpressure, just yell. We really shouldn't have this unless we start getting
