@@ -135,9 +135,8 @@ class Camera:
             should_push = True
             # If things aren't open, retry until they are. Don't let read requests come in any earlier
             # than this, otherwise we can deadlock ourselves.
-            if self.config.capture_source != None and self.config.capture_source != "":
-                self.current_capture_source = self.config.capture_source
-                addr = str(self.current_capture_source)
+            if self.config.capture_source not in (None, ""):
+                addr = str(self.config.capture_source)
                 if is_serial_capture_source(addr):
                     if (
                         self.serial_connection is None
