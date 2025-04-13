@@ -35,6 +35,7 @@ from colorama import Fore
 from config import EyeTrackCameraConfig
 from enum import Enum
 from libscrc import rohc
+from utils.misc_utils import is_nt
 import psutil, os
 import sys
 
@@ -307,7 +308,8 @@ class Camera:
             rate = 115200 if sys.platform == "darwin" else 3000000  # Higher baud rate not working on macOS
             conn = serial.Serial(baudrate=rate, port=port, xonxoff=False, dsrdtr=False, rtscts=False)
             # Set explicit buffer size for serial.
-            conn.set_buffer_size(rx_size=BUFFER_SIZE, tx_size=BUFFER_SIZE)
+            if is_nt:
+                conn.set_buffer_size(rx_size=BUFFER_SIZE, tx_size=BUFFER_SIZE)
 
             print(f"{Fore.CYAN}[INFO] ETVR Serial Tracker device connected on {port}{Fore.RESET}")
             self.serial_connection = conn
