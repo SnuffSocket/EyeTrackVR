@@ -69,10 +69,10 @@ def is_serial_capture_source(addr: str) -> bool:
     """
     Returns True if the capture source address is a serial port.
     """
+    addr_upper = addr.upper()
     return (
-        addr.startswith("COM") or addr.startswith("/dev/cu") or addr.startswith("/dev/tty")  # Windows  # macOS  # Linux
+        addr_upper.startswith("COM") or addr.startswith("/dev/cu") or addr.startswith("/dev/tty") # Windows  # macOS  # Linux
     )
-
 
 class Camera:
     def __init__(
@@ -82,7 +82,7 @@ class Camera:
         cancellation_event: "threading.Event",
         capture_event: "threading.Event",
         camera_status_outgoing: "queue.Queue[CameraState]",
-        camera_output_outgoing: "queue.Queue(maxsize=2)",
+        camera_output_outgoing: "queue.Queue(maxsize=5)",
     ):
 
         self.camera_status = CameraState.CONNECTING
@@ -253,6 +253,8 @@ class Camera:
                     if end > self.sp_max:
                         self.sp_max = end
         return False
+
+
 
     def get_serial_camera_picture(self, should_push):
         conn = self.serial_connection
