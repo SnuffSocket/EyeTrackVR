@@ -34,7 +34,7 @@ import time
 from colorama import Fore
 from config import EyeTrackCameraConfig
 from enum import Enum
-from libscrc import rohc
+# from libscrc import rohc
 from utils.misc_utils import is_nt
 import psutil, os
 import sys
@@ -241,10 +241,10 @@ class Camera:
                         buffer_len = self.serial_read(conn.in_waiting)
                     if buffer_len >= end and self.buffer[end-4:end-2] == b"\xff\xd9":
                         # Compatibility w/OpenIris firmware w/o CRC
-                        if self.buffer[end-2:end] != b"\xff\xa0":
-                            if self.buffer[end-2:end-1] != (~rohc(self.buffer[ETVR_HEADER_LEN:end-2]) & 0xFF).to_bytes(1, "little"):
-                                self.buffer = self.buffer[end:]
-                                return False
+                        # if self.buffer[end-2:end] != b"\xff\xa0":
+                        #     if self.buffer[end-2:end-1] != (~rohc(self.buffer[ETVR_HEADER_LEN:end-2]) & 0xFF).to_bytes(1, "little"):
+                        #         self.buffer = self.buffer[end:]
+                        #         return False
                         if end > self.sp_max:
                             self.sp_max = end
                         jpeg = self.buffer[ETVR_HEADER_LEN:end-2]
