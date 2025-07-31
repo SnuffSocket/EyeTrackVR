@@ -3,7 +3,7 @@ from typing_extensions import Annotated
 
 from settings.modules.BaseModule import BaseSettingsModule, BaseValidationModel
 from settings.constants import BACKGROUND_COLOR
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 from settings.modules.CommonFieldValidators import check_is_float_convertible
 

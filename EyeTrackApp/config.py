@@ -48,6 +48,7 @@ class EyeTrackCameraConfig(BaseModel):
     roi_window_h: int = 240
     focal_length: int = 30
     capture_source: Union[int, str, None] = None
+    capture_source_list: bool = False
     calib_XMAX: Union[float, None] = None
     calib_XMIN: Union[float, None] = None
     calib_YMAX: Union[float, None] = None
@@ -166,6 +167,7 @@ class EyeTrackSettingsConfig(BaseModel):
     gui_skip_autoradius: bool = False
     gui_thresh_add: int = 11
     gui_update_check: bool = True
+    gui_use_gpu_decoder: bool = False
     gui_ROSC: bool = False
     gui_circular_crop_right: bool = False
     gui_circular_crop_left: bool = False
@@ -327,7 +329,7 @@ class EyeTrackConfig(BaseModel):
         print(f"\033[92m[INFO] Config Saved Successfully\033[0m")
 
     def register_listener_callback(self, callback):
-        print(f"[DEBUG] Registering listener {callback}")
+        #print(f"[DEBUG] Registering listener {callback}") # DEBUG
         self.__listeners.append(callback)
 
     def __notify_listeners(self, data: dict):

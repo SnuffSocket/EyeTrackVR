@@ -1259,14 +1259,15 @@ files = [
 cp2110 = ["hidapi"]
 
 [[package]]
-name = "pysimplegui-4-foss"
-version = "4.60.4.1"
-description = "THIS IS A MIRROR OF THE FINAL VERSION OF PYSIMPLEGUI4 THAT WAS FOSS. No further updates/support."
+name = "freesimplegui"
+version = "5.2.0.post1"
+description = "The free-forever Python GUI framework."
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "PySimpleGUI_4_foss-4.60.4.1-py3-none-any.whl", hash = "sha256:77656e9f40f4f9592fc64f73899303003f7346e1dcf7c3d0d7a0fd9b0f3cac43"},
+    {file = "freesimplegui-5.2.0.post1-py3-none-any.whl", hash = "sha256:3d61eb519324503232f86b2f1bd7f5c6813ce225f6e189d0fd737ddb036af4d5"},
+    {file = "freesimplegui-5.2.0.post1.tar.gz", hash = "sha256:e58a0e6758e9a9e87152256911f94fcc3998356d1309973a9f4d9df2dc55f98a"},
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 from typing import Iterable
 
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 from pydantic import AfterValidator
 from typing_extensions import Annotated
@@ -25,7 +25,7 @@ class VRCFTSettingsModuleValidationModel(BaseValidationModel):
     gui_SqueezeThresholdV2_max: float
     gui_EyebrowThresholdRising: float
     gui_EyebrowThresholdLowering: float
-    # this is a hack. I don't like it, but that's what I gotta do to make both, Pydantic and PySimpleGUI happy
+    # this is a hack. I don't like it, but that's what I gotta do to make both, Pydantic and FreeSimpleGUI happy
     gui_OutputMultiplier: Annotated[float, AfterValidator(try_convert_to_float)]
 
 

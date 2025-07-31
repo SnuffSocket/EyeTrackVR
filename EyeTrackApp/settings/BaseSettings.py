@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Iterable
 
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 from colorama import Fore
 from threading import Event
 from eye import EyeId

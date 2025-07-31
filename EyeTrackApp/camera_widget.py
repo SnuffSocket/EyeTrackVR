@@ -24,7 +24,7 @@ LICENSE: Babble Software Distribution License 1.0
 ------------------------------------------------------------------------------------------------------
 """
 
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 from config import EyeTrackConfig
 from collections import deque
 from threading import Event, Thread
@@ -34,8 +34,9 @@ from eye_processor import EyeProcessor, EyeInfoOrigin
 from queue import Queue, Empty
 from camera import Camera, CameraState
 import cv2
+import os
 from osc.OSCMessage import OSCMessageType, OSCMessage
-from utils.misc_utils import PlaySound, SND_FILENAME, SND_ASYNC, resource_path
+from utils.misc_utils import PlaySound, list_camera_names, COM_PORTS, SND_FILENAME, SND_ASYNC, resource_path
 import numpy as np
 
 
@@ -66,6 +67,7 @@ class CameraWidget:
         self.gui_roi_message = f"-ROIMESSAGE{widget_id}-"
         self.gui_mask_markup = f"-MARKUP{widget_id}-"
         self.gui_mask_lighten = f"-LIGHTEN{widget_id}-"
+        self.gui_refresh_button = f"-REFRESHCAMLIST{widget_id}-"
 
         self.last_eye_info = None
         self.osc_queue = osc_queue
@@ -75,6 +77,8 @@ class CameraWidget:
         self.configl = main_config.left_eye
         self.configr = main_config.right_eye
         self.settings = main_config.settings
+        self.camera_list = list_camera_names()
+        self.camera_thread = None
         if self.eye_id == EyeId.RIGHT:
             self.config = main_config.right_eye
         elif self.eye_id == EyeId.LEFT:
@@ -82,6 +86,7 @@ class CameraWidget:
         else:
             raise RuntimeError("\033[91m[WARN] Cannot have a camera widget represent both eyes!\033[0m")
 
+        self.cam_changed = Event()
         self.cancellation_event = Event()
         # Set the event until start is called, otherwise we can block if shutdown is called.
         self.cancellation_event.set()
@@ -107,10 +112,12 @@ class CameraWidget:
         self.camera = Camera(
             self.config,
             0,
+            self.cam_changed,
             self.cancellation_event,
             self.capture_event,
             self.camera_status_queue,
             self.capture_queue,
+            self.settings,
         )
 
         self.hover = None
@@ -131,17 +138,24 @@ class CameraWidget:
         self.is_mouse_up = True
         self.hover_pos = None
         self.in_roi_mode = False
-        self.movavg_fps_queue = deque(maxlen=120)
-        self.movavg_bps_queue = deque(maxlen=120)
+        self.bps = 0
 
     def get_widget_layout(self):
         self.widget_layout = [
             [
                 sg.Text("Camera Address", background_color="#424042"),
-                sg.InputText(
-                    self.config.capture_source,
+                sg.InputCombo(
+                    values=self.camera_list,
+                    default_value=self.config.capture_source,
                     key=self.gui_camera_addr,
                     tooltip="Enter the IP address or UVC port of your camera. (Include the 'http://')",
+                    enable_events=True,
+                    size=(20,0),
+                ),
+                sg.Button(
+                    "Refresh List",
+                    key=self.gui_refresh_button,
+                    button_color="#6f4ca1",
                 ),
             ],
             [
@@ -288,14 +302,12 @@ class CameraWidget:
         self.get_widget_layout()
 
     def _movavg_fps(self, next_fps):
-        self.movavg_fps_queue.append(next_fps)
-        fps = round(sum(self.movavg_fps_queue) / len(self.movavg_fps_queue))
-        millisec = round((1 / fps if fps else 0) * 1000)
-        return f"{fps} Fps {millisec} ms"
+        # next_fps is already averaged
+        return f"{round(next_fps)} Fps {round((1 / next_fps if next_fps else 0) * 1000)} ms"
 
     def _movavg_bps(self, next_bps):
-        self.movavg_bps_queue.append(next_bps)
-        return f"{sum(self.movavg_bps_queue) / len(self.movavg_bps_queue) * 0.001 * 0.001 * 8:.3f} Mbps"
+        self.bps = round(0.02 * next_bps + 0.98 * self.bps)
+        return f"{self.bps * 8e-6:.3f} Mbps"
 
     def _cartesian_to_polar(self):
         if not (self.xy0 is None or self.xy1 is None):
@@ -321,6 +333,17 @@ class CameraWidget:
     def started(self):
         return not self.cancellation_event.is_set()
 
+    def clear_queues(self):
+        if self.capture_queue.qsize() > 0:
+            with self.capture_queue.mutex:
+                self.capture_queue.queue.clear()
+        if self.roi_queue.qsize() > 0:
+            with self.roi_queue.mutex:
+                self.roi_queue.queue.clear()
+        if self.image_queue.qsize() > 0:
+            with self.image_queue.mutex:
+                self.image_queue.queue.clear()
+
     def start(self):
         # If we're already running, bail
         if not self.cancellation_event.is_set():
@@ -328,6 +351,11 @@ class CameraWidget:
         self.cancellation_event.clear()
         self.ransac_thread = Thread(target=self.ransac.run)
         self.ransac_thread.start()
+        # If the thread is still alive when we get back now block/wait without timeout
+        if self.camera_thread is not None and self.camera_thread.is_alive():
+            self.camera.camera_status = CameraState.CONNECTING  # TODO: Add a new state that lets user know whats going on?
+            self.camera_thread.join()
+            self.clear_queues()
         self.camera_thread = Thread(target=self.camera.run)
         self.camera_thread.start()
 
@@ -336,8 +364,11 @@ class CameraWidget:
         if self.cancellation_event.is_set():
             return
         self.cancellation_event.set()
+        self.cam_changed.set()
         self.ransac_thread.join()
-        self.camera_thread.join()
+        self.camera_thread.join(0.2)    # Timeout so we don't block tab change for "cv_ffmpeg_open_timeout"/"cv_ffmpeg_read_timeout" milliseconds
+        if self.camera_thread is None or not self.camera_thread.is_alive():
+            self.clear_queues()
 
     def on_config_update(self, data):
         keys = set(data.keys())
@@ -373,28 +404,41 @@ class CameraWidget:
     def render(self, window, event, values):
         changed = False
 
-        if self.settings.gui_disable_gui == False:
+        if not self.settings.gui_disable_gui:
 
             # If anything has changed in our configuration settings, change/update those.
-            if event == self.gui_save_tracking_button and values[self.gui_camera_addr] != self.config.capture_source:
-                print("\033[94m[INFO] New value: {}\033[0m".format(values[self.gui_camera_addr]))
-                try:
-                    # Try storing ints as ints, for those using wired cameras.
-                    self.config.capture_source = int(values[self.gui_camera_addr])
-                except ValueError:
-                    if values[self.gui_camera_addr] == "":
+            if event is self.gui_save_tracking_button:
+                if values[self.gui_camera_addr] is not self.config.capture_source:
+                    from_list = False
+                    value = str(values[self.gui_camera_addr])
+                    print(f"\033[94m[INFO] New value: {value}\033[0m")
+                    if value in (None, ""):
                         self.config.capture_source = None
+                    # Store ints as ints, for those using wired cameras.
+                    elif value.isdigit():
+                        self.config.capture_source = int(value)
                     else:
-                        if (
-                            len(values[self.gui_camera_addr]) > 5
-                            and "http" not in values[self.gui_camera_addr]
-                            and ".mp4" not in values[self.gui_camera_addr]
-                            and "/dev" not in values[self.gui_camera_addr]
+                        value_l = value.casefold()
+                        # If serial or path/file:
+                        if value_l.startswith(COM_PORTS) or os.path.exists(value):
+                            self.config.capture_source = value
+                        # If from list
+                        elif self.config.capture_source_list or value_l in [c.casefold() for c in list_camera_names()]:
+                            self.config.capture_source = value
+                            from_list = True
+                        # If http is not in camera address, add it.
+                        elif (
+                            "http" not in value
+                            and ".mp4" not in value
+                            and "udp" not in value
                         ):  # If http is not in camera address, add it.
-                            self.config.capture_source = f"http://{values[self.gui_camera_addr]}/"
+                            self.config.capture_source = f"http://{value}/"
                         else:
-                            self.config.capture_source = values[self.gui_camera_addr]
-                changed = True
+                            self.config.capture_source = value
+                    self.config.capture_source_list = from_list
+                    changed = True
+                # Honor the "restart" part the button
+                self.cam_changed.set()
 
             if self.config.rotation_angle != int(values[self.gui_rotation_slider]):
                 self.config.rotation_angle = int(values[self.gui_rotation_slider])
@@ -453,6 +497,10 @@ class CameraWidget:
                 self.xy1 = np.array(values[self.gui_roi_selection])
 
                 self._cartesian_to_polar()
+
+            if event == self.gui_refresh_button:
+                self.camera_list = list_camera_names()
+                window[self.gui_camera_addr].update(values=self.camera_list,size=(20,0))
 
             if event == "{}+MOVE".format(self.gui_roi_selection):
                 if self.is_mouse_up:

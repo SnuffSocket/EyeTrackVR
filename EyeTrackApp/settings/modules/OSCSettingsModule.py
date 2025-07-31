@@ -2,7 +2,7 @@ from pydantic import model_validator
 
 from settings.modules.BaseModule import BaseSettingsModule, BaseValidationModel
 from settings.constants import BACKGROUND_COLOR
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 
 class OSCValidationModel(BaseValidationModel):
