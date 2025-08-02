@@ -227,6 +227,7 @@ def main():
     config.save()
 
     cancellation_event = threading.Event()
+    capture_process = threading.Event()
     # Check to see if we can connect to our video source first. If not, bring up camera finding
     # dialog.
     try:
@@ -267,8 +268,8 @@ def main():
     osc_queue: queue.Queue[OSCMessage] = queue.Queue(maxsize=10)
 
     eyes = [
-        CameraWidget(EyeId.RIGHT, config, osc_queue),
-        CameraWidget(EyeId.LEFT, config, osc_queue),
+        CameraWidget(EyeId.RIGHT, config, osc_queue, capture_process),
+        CameraWidget(EyeId.LEFT, config, osc_queue, capture_process),
     ]
 
     settings = [
@@ -278,6 +279,7 @@ def main():
     ]
 
     osc_manager = OSCManager(
+        capture_process=capture_process,
         osc_message_in_queue=osc_queue,
         config=config,
     )
@@ -345,6 +347,7 @@ def main():
                 for eye in eyes:
                     eye.stop()
                 cancellation_event.set()
+                capture_process.set()
                 osc_manager.shutdown()
                 timerResolution(False)
                 print("\033[94m[INFO] Exiting EyeTrackApp\033[0m")

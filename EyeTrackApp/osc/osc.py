@@ -42,11 +42,13 @@ import threading
 class OSCManager:
     def __init__(
         self,
+        capture_process: threading.Event,
         osc_message_in_queue: queue.Queue[OSCMessage],
         config: EyeTrackConfig,
     ):
         self.sender_cancellation_event = threading.Event()
         self.receiver_cancellation_event = threading.Event()
+        self.capture_process = capture_process
         self.listeners = {}
         self.osc_message_in_queue = osc_message_in_queue
         self.config = config
@@ -63,7 +65,7 @@ class OSCManager:
     def setup_sender(self):
         print(f"\033[92m[INFO] Setting up OSC sender\033[0m")
         self.sender_cancellation_event.clear()
-        self.osc_sender = OSCSender(self.sender_cancellation_event, self.osc_message_in_queue, self.config)
+        self.osc_sender = OSCSender(self.sender_cancellation_event, self.capture_process, self.osc_message_in_queue, self.config)
         self.osc_sender_thread = threading.Thread(target=self.osc_sender.run)
         self.osc_sender_thread.start()
 
@@ -119,10 +121,12 @@ class OSCSender:
     def __init__(
         self,
         cancellation_event: threading.Event,
+        capture_process: threading.Event,
         msg_queue: queue.Queue[OSCMessage],
         main_config: EyeTrackConfig,
     ):
         self.cancellation_event = cancellation_event
+        self.capture_process = capture_process
         self.msg_queue = msg_queue
         self.main_config = main_config
         self.config = main_config.settings
@@ -144,8 +148,10 @@ class OSCSender:
             vrc_osc_output_client = self.vrcft_client
 
         while not self.cancellation_event.is_set():
+            if self.msg_queue.empty():
+                self.capture_process.wait()
             try:
-                osc_message: OSCMessage = self.msg_queue.get(block=True, timeout=0.1)
+                osc_message: OSCMessage = self.msg_queue.get(block=True, timeout=0.2)
                 match osc_message.type:
                     case OSCMessageType.EYE_INFO:
                         self.vrc_sender.output_osc_info(
@@ -158,9 +164,7 @@ class OSCSender:
                         self.module_sender.send(osc_message=osc_message, client=self.vrcft_client)
                     case _:
                         raise Exception("Encountered message without a handler %s", osc_message.type)
-            except TypeError:
-                continue
-            except queue.Empty:
+            except (TypeError, queue.Empty):
                 continue
 
 

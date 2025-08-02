@@ -78,8 +78,10 @@ class Camera:
         self,
         config: EyeTrackCameraConfig,
         camera_index: int,
+        cam_changed: "threading.Event",
         cancellation_event: "threading.Event",
         capture_event: "threading.Event",
+        capture_process: "threading.Event",
         camera_status_outgoing: "queue.Queue[CameraState]",
         camera_output_outgoing: "queue.Queue(maxsize=5)",
         settings: EyeTrackSettingsConfig,
@@ -93,6 +95,7 @@ class Camera:
         self.camera_status_outgoing = camera_status_outgoing
         self.camera_output_outgoing = camera_output_outgoing
         self.capture_event = capture_event
+        self.capture_process = capture_process
         self.cancellation_event = cancellation_event
         self.current_capture_source = config.capture_source
         self.cv2_camera: "cv2.VideoCapture" = None
@@ -334,4 +337,5 @@ class Camera:
         if qsize > 1:
             print(f"{Fore.YELLOW}[WARN] CAPTURE QUEUE BACKPRESSURE OF {qsize}. CHECK FOR CRASH OR TIMING ISSUES IN ALGORITHM.{Fore.RESET}")
         self.camera_output_outgoing.put((image, frame_number, fps))
+        self.capture_process.set()
         self.capture_event.clear()

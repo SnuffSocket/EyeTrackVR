@@ -46,7 +46,7 @@ Y = 1
 
 
 class CameraWidget:
-    def __init__(self, widget_id: EyeId, main_config: EyeTrackConfig, osc_queue: Queue):
+    def __init__(self, widget_id: EyeId, main_config: EyeTrackConfig, osc_queue: Queue, capture_process: Event):
         self.gui_camera_addr = f"-CAMERAADDR{widget_id}-"
         self.gui_rotation_slider = f"-ROTATIONSLIDER{widget_id}-"
         self.gui_rotation_ui_padding = f"-ROTATIONUIPADDING{widget_id}-"
@@ -71,6 +71,7 @@ class CameraWidget:
 
         self.last_eye_info = None
         self.osc_queue = osc_queue
+        self.capture_process = capture_process
         self.main_config = main_config
         self.eye_id = widget_id
         self.settings_config = main_config.settings
@@ -78,6 +79,7 @@ class CameraWidget:
         self.configr = main_config.right_eye
         self.settings = main_config.settings
         self.camera_list = list_camera_names()
+        self.camera_thread = None
         if self.eye_id == EyeId.RIGHT:
             self.config = main_config.right_eye
         elif self.eye_id == EyeId.LEFT:
@@ -100,6 +102,7 @@ class CameraWidget:
             main_config,
             self.cancellation_event,
             self.capture_event,
+            self.capture_process,
             self.capture_queue,
             self.image_queue,
             self.eye_id,
@@ -113,6 +116,7 @@ class CameraWidget:
             self.cam_changed,
             self.cancellation_event,
             self.capture_event,
+            self.capture_process,
             self.camera_status_queue,
             self.capture_queue,
             self.settings,
@@ -362,6 +366,7 @@ class CameraWidget:
         if self.cancellation_event.is_set():
             return
         self.cancellation_event.set()
+        self.capture_process.set()
         self.cam_changed.set()
         self.ransac_thread.join()
         self.camera_thread.join(0.2)    # Timeout so we don't block tab change for "cv_ffmpeg_open_timeout"/"cv_ffmpeg_read_timeout" milliseconds

@@ -76,6 +76,7 @@ class EyeProcessor:
         baseconfig: "EyetrackConfig",
         cancellation_event: "threading.Event",
         capture_event: "threading.Event",
+        capture_process: "threading.Event",
         capture_queue_incoming: "queue.Queue(maxsize=2)",
         image_queue_outgoing: "queue.Queue(maxsize=2)",
         eye_id,
@@ -89,6 +90,7 @@ class EyeProcessor:
         self.image_queue_outgoing = image_queue_outgoing
         self.cancellation_event = cancellation_event
         self.capture_event = capture_event
+        self.capture_process = capture_process
         self.eye_id = eye_id
         self.baseconfig = baseconfig
         self.filterlist = []
@@ -714,12 +716,14 @@ class EyeProcessor:
             try:
                 if self.capture_queue_incoming.empty():
                     self.capture_event.set()
+                    self.capture_process.clear()
+                    self.capture_process.wait()
                 # Wait a bit for images here. If we don't get one, just try again.
                 (
                     self.current_image,
                     self.current_frame_number,
                     self.current_fps,
-                ) = self.capture_queue_incoming.get(block=True, timeout=0.1)
+                ) = self.capture_queue_incoming.get(block=True, timeout=0.2)
             except queue.Empty:
                 # print("No image available")
                 continue
