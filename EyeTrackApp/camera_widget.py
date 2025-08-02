@@ -26,7 +26,6 @@ LICENSE: Babble Software Distribution License 1.0
 
 import FreeSimpleGUI as sg
 from config import EyeTrackConfig
-from collections import deque
 from threading import Event, Thread
 import math
 from eye import EyeId
@@ -317,7 +316,7 @@ class CameraWidget:
 
     def _movavg_bps(self, next_bps):
         self.bps = round(0.02 * next_bps + 0.98 * self.bps)
-        return f"{self.bps * 0.001 * 0.001 * 8:.3f} Mbps"
+        return f"{self.bps * 8e-6:.3f} Mbps"
 
     def _cartesian_to_polar(self):
         if not (self.xy0 is None or self.xy1 is None):
@@ -333,8 +332,7 @@ class CameraWidget:
             cy = math.sin(ca) * self.cr + self.roi_image_center[Y]
             roi_pos = np.array((int(cx), int(cy))) - self.roi_size // 2
             return (roi_pos, roi_pos + self.roi_size)
-        else:
-            return (None, None)
+        return (None, None)
 
     def _polar_to_cartesian(self):
         if not (self.cr is None or self.ca is None or self.roi_size is None):
@@ -530,13 +528,11 @@ class CameraWidget:
                 self.camera_list = list_camera_names()
                 window[self.gui_camera_addr].update(values=self.camera_list,size=(20,0))
 
-            if event == "{}+MOVE".format(self.gui_roi_selection):
-                if self.is_mouse_up:
-                    self.hover_pos = np.array(values[self.gui_roi_selection])
+            if event == "{}+MOVE".format(self.gui_roi_selection) and self.is_mouse_up:
+                self.hover_pos = np.array(values[self.gui_roi_selection])
 
-                    if self.padded_size is not None:
-                        if any(self.hover_pos > self.padded_size):
-                            self.hover_pos = None
+                if self.padded_size is not None and any(self.hover_pos > self.padded_size):
+                    self.hover_pos = None
 
             if event == self.gui_restart_calibration:
                 self.recalibrate_eyes()
@@ -563,7 +559,7 @@ class CameraWidget:
 
             elif needs_roi_set:
                 window[self.gui_mode_readout].update("Awaiting Eye Crop")
-            elif self.ransac.calibration_frame_counter != None:
+            elif self.ransac.calibration_frame_counter is not None:
                 window[self.gui_mode_readout].update("Calibration")
             else:
                 window[self.gui_mode_readout].update("Tracking")

@@ -29,7 +29,6 @@ LICENSE: Babble Software Distribution License 1.0
 """
 
 import sys
-import asyncio
 import os
 from config import EyeTrackCameraConfig
 from config import EyeTrackSettingsConfig
@@ -51,22 +50,6 @@ from AHSF import *
 from osc.OSCMessage import OSCMessageType, OSCMessage
 os.environ["OMP_NUM_THREADS"] = "1"
 sys.path.append(".")
-
-def run_once(f):
-    def wrapper(*args, **kwargs):
-        if not wrapper.has_run:
-            wrapper.has_run = True
-            return f(*args, **kwargs)
-
-    wrapper.has_run = False
-    return wrapper
-
-
-async def delayed_setting_change(setting, value):
-    await asyncio.sleep(5)
-    setting = value
-    PlaySound(resource_path("Audio/completed.wav"), SND_FILENAME | SND_ASYNC)
-
 
 class EyeProcessor:
     def __init__(
@@ -373,7 +356,7 @@ class EyeProcessor:
 
     def LEAPM(self):
         self.thresh = self.current_image_gray.copy()
-        (self.current_image_gray, self.rawx, self.rawy, eyeopen,) = self.er_leap.run(
+        (self.current_image_gray, self.rawx, self.rawy, eyeopen) = self.er_leap.run(
             self.current_image_gray, self.current_image_gray_clean, self.calibration_frame_counter
         )  # TODO: make own self var and LEAP toggle
         if self.settings.gui_LEAP_lid:
@@ -493,7 +476,7 @@ class EyeProcessor:
         else:
             pass
         self.hasrac_en = False
-        current_image_gray_copy = self.current_image_gray.copy()  # Duplicate before overwriting in RANSAC3D.
+        #current_image_gray_copy = self.current_image_gray.copy()  # Duplicate before overwriting in RANSAC3D.
         (
             self.rawx,
             self.rawy,
@@ -550,35 +533,35 @@ class EyeProcessor:
 
     def ALGOSELECT(self):
         # send the tracking algos previous fail number, in algo if we pass set to 0, if fail, + 1
-        if self.failed == 0 and self.firstalgo != None:
+        if self.failed == 0 and self.firstalgo is not None:
             self.firstalgo()
         else:
             self.failed = self.failed + 1
-        if self.failed == 1 and self.secondalgo != None:
+        if self.failed == 1 and self.secondalgo is not None:
             self.secondalgo()
         else:
             self.failed = self.failed + 1
-        if self.failed == 2 and self.thirdalgo != None:
+        if self.failed == 2 and self.thirdalgo is not None:
             self.thirdalgo()
         else:
             self.failed = self.failed + 1
-        if self.failed == 3 and self.fourthalgo != None:
+        if self.failed == 3 and self.fourthalgo is not None:
             self.fourthalgo()
         else:
             self.failed = self.failed + 1
-        if self.failed == 4 and self.fithalgo != None:
+        if self.failed == 4 and self.fithalgo is not None:
             self.fithalgo()
         else:
             self.failed = self.failed + 1
-        if self.failed == 5 and self.sixthalgo != None:
+        if self.failed == 5 and self.sixthalgo is not None:
             self.sixthalgo()
         else:
             self.failed = self.failed + 1
-        if self.failed == 6 and self.seventhalgo != None:
+        if self.failed == 6 and self.seventhalgo is not None:
             self.seventhalgo()
         else:
             self.failed = self.failed + 1
-        if self.failed == 7 and self.eigthalgo != None:
+        if self.failed == 7 and self.eigthalgo is not None:
             self.eigthalgo()
         else:
             self.failed = 0  # we have reached last possible algo and it is disabled, move to first algo
@@ -624,9 +607,8 @@ class EyeProcessor:
 
             algolist[self.settings.gui_HSFP] = self.HSFM
 
-        else:
-            if self.er_hsf is not None:
-                self.er_hsf = None
+        elif self.er_hsf is not None:
+            self.er_hsf = None
 
         if self.settings.gui_HSRAC:
             if self.er_hsf is None:

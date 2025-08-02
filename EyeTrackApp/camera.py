@@ -63,16 +63,6 @@ class CameraState(Enum):
     CONNECTED = 1
     DISCONNECTED = 2
 
-
-def is_serial_capture_source(addr: str) -> bool:
-    """
-    Returns True if the capture source address is a serial port.
-    """
-    addr_upper = addr.upper()
-    return (
-        addr_upper.startswith("COM") or addr.startswith("/dev/cu") or addr.startswith("/dev/tty") # Windows  # macOS  # Linux
-    )
-
 class Camera:
     def __init__(
         self,
@@ -207,29 +197,29 @@ class Camera:
 
     def get_cv2_camera_picture(self, should_push):
         try:
-            ret, image = self.cv2_camera.read()
+            rc, image = self.cv2_camera.read()
+            if not rc:
+                #self.cv2_camera.set(cv2.CAP_PROP_POS_FRAMES, 0) # Reset video/stream
+                raise RuntimeError("Problem while getting frame")
             height, width = image.shape[:2]  # Calculate the aspect ratio
             if int(width) > 680:
-                aspect_ratio = float(width) / float(
-                    height
-                )  # Determine the new height based on the desired maximum width
+                aspect_ratio = float(width) / float(height)  # Determine the new height based on the desired maximum width
                 new_height = int(680 / aspect_ratio)
                 image = cv2.resize(image, (680, new_height))
-            if not ret:
-                self.cv2_camera.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                raise RuntimeError("Problem while getting frame")
-            frame_number = self.cv2_camera.get(cv2.CAP_PROP_POS_FRAMES)
-            # Calculate FPS
-            current_frame_time = time.time()    # Should be using "time.perf_counter()", not worth ~3x cycles?
-            delta_time = current_frame_time - self.last_frame_time
-            self.last_frame_time = current_frame_time
-            current_fps = 1 / delta_time if delta_time > 0 else 0
-            # Exponential moving average (EMA). ~1100ns savings, delicious..
-            self.fps = 0.02 * current_fps + 0.98 * self.fps
-            self.bps = image.nbytes * self.fps
 
             if should_push:
-                self.push_image_to_queue(image, frame_number + 1, self.fps)
+                self.frame_number = int(self.cv2_camera.get(cv2.CAP_PROP_POS_FRAMES))
+                # Calculate FPS
+                current_frame_time = time.time()    # Should be using "time.perf_counter()", not worth ~3x cycles?
+                delta_time = current_frame_time - self.last_frame_time
+                self.last_frame_time = current_frame_time
+                current_fps = 1 / delta_time if delta_time > 0 else 0
+                # Exponential moving average (EMA). ~1100ns savings, delicious..
+                self.fps = 0.02 * current_fps + 0.98 * self.fps
+                # Fake compressed size, since .nbytes returns the uncompressed size in memory
+                self.bps = 0.0384 * image.nbytes * self.fps
+
+                self.push_image_to_queue(image, self.frame_number, self.fps) #TODO: Remove frame_number? not used
         except Exception:
             print(f"{Fore.YELLOW}[WARN] Capture source problem, assuming camera disconnected, waiting for reconnect.{Fore.RESET}")
             self.camera_status = CameraState.DISCONNECTED
@@ -242,11 +232,8 @@ class Camera:
         # Erm, so yah...
         buffer_len = self.serial_read(2048)
         if buffer_len >= ETVR_HEADER_LEN:
-            if self.sp_max and buffer_len > (self.sp_max * 2.3):
-                # Skip frames: Ad hoc to catch up to latest frames. Got a feelin there's going to be unforeseen consequences for this one
-                beg = self.buffer.rfind(ETVR_HEADER)
-            else:
-                beg = self.buffer.find(ETVR_HEADER)
+            # Skip frames: Ad hoc to catch up to latest frames. Got a feelin there's going to be unforeseen consequences for this one
+            beg = self.buffer.rfind(ETVR_HEADER) if self.sp_max and buffer_len > self.sp_max * 2.3 else self.buffer.find(ETVR_HEADER)
             if beg != -1:
                 self.buffer = self.buffer[beg:]
                 buffer_len = len(self.buffer)
@@ -282,17 +269,18 @@ class Camera:
                     if image is None:
                         print(f"{Fore.YELLOW}[WARN] Frame drop. Corrupted JPEG.{Fore.RESET}")
                         return
-                    # Calculate FPS
-                    current_frame_time = time.time()    # Should be using "time.perf_counter()", not worth ~3x cycles?
-                    delta_time = current_frame_time - self.last_frame_time
-                    self.last_frame_time = current_frame_time
-                    current_fps = 1 / delta_time if delta_time > 0 else 0
-                    # Exponential moving average (EMA). ~1100ns savings, delicious..
-                    self.fps = 0.02 * current_fps + 0.98 * self.fps
-                    self.bps = len(jpeg) * self.fps
 
                     if should_push:
-                        self.push_image_to_queue(image, int(current_fps), self.fps)
+                        # Calculate FPS
+                        current_frame_time = time.time()    # Should be using "time.perf_counter()", not worth ~3x cycles?
+                        delta_time = current_frame_time - self.last_frame_time
+                        self.last_frame_time = current_frame_time
+                        current_fps = 1 / delta_time if delta_time > 0 else 0
+                        # Exponential moving average (EMA). ~1100ns savings, delicious..
+                        self.fps = 0.02 * current_fps + 0.98 * self.fps
+                        self.bps = len(jpeg) * self.fps
+
+                        self.push_image_to_queue(image, self.frame_number + 1, self.fps) #TODO: Remove current_fps? not used
                 # Discard the serial buffer. This is due to the fact that it,
                 # may build up some outdated frames. A bit of a workaround here tbh.
                 # Do this at the end to give buffer time to refill.

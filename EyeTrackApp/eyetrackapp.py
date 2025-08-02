@@ -39,8 +39,6 @@ from osc.osc import OSCManager
 from osc.OSCMessage import OSCMessage
 from utils.misc_utils import is_nt, resource_path
 from utils.mirrortrack import MirrorTrack
-import cv2
-import numpy as np
 import uuid
 
 winmm = None
@@ -50,7 +48,7 @@ if is_nt:
     from ctypes import windll, c_int
     try:
         winmm = windll.winmm
-    except OSError:
+    except (AttributeError, OSError):
         print("\033[91m[WARN] Failed to load winmm.dll\033[0m")
 os.system("color")  # init ANSI color
 
@@ -212,7 +210,7 @@ def create_window(config, settings, eyes):
         background_color="#292929")
 
 def timerResolution(toggle):
-    if winmm != None:
+    if winmm is not None:
         if toggle:
             rc = c_int(winmm.timeBeginPeriod(1))
             if rc.value != 0:

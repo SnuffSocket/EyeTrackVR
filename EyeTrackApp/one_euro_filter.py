@@ -23,7 +23,7 @@ class OneEuroFilter:
         self.beta = np.full(x0.shape, beta)
         self.d_cutoff = np.full(x0.shape, d_cutoff)
         # Previous values.
-        self.x_prev = x0
+        self.x_prev = x0.astype(np.float32)
         self.dx_prev = np.full(x0.shape, dx0)
         self.t_prev = time()
 
@@ -53,7 +53,7 @@ class OneEuroFilter:
 
                 return x_hat
             else:
-                self.x_prev = x
+                self.x_prev = x    #TODO: Check if my old alt code for this handles jitter better
                 return x
         except:
             print("\033[91m[ERROR] One Euro Filter Error. Is your system clock running properly?\033[0m")
