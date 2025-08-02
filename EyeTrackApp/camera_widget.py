@@ -54,6 +54,7 @@ class CameraWidget:
         self.gui_roi_layout = f"-ROILAYOUT{widget_id}-"
         self.gui_roi_selection = f"-GRAPH{widget_id}-"
         self.gui_tracking_button = f"-TRACKINGMODE{widget_id}-"
+        self.gui_autoroi = f"-AUTOROI{widget_id}-"
         self.gui_save_tracking_button = f"-SAVETRACKINGBUTTON{widget_id}-"
         self.gui_tracking_layout = f"-TRACKINGLAYOUT{widget_id}-"
         self.gui_tracking_image = f"-IMAGE{widget_id}-"
@@ -80,6 +81,7 @@ class CameraWidget:
         self.settings = main_config.settings
         self.camera_list = list_camera_names()
         self.camera_thread = None
+        self.maybe_image = None
         if self.eye_id == EyeId.RIGHT:
             self.config = main_config.right_eye
         elif self.eye_id == EyeId.LEFT:
@@ -211,6 +213,12 @@ class CameraWidget:
                 #       button_color="#6f4ca1",
                 #      tooltip="Lighten shadowed areas.",
                 #    ),
+                sg.Button(
+                    "Select Entire Frame",
+                    key=self.gui_autoroi,
+                    button_color="#6f4ca1",
+                    tooltip="Automatically set ROI",
+                ),
                 sg.Text("Rotation", background_color="#424042"),
                 sg.Slider(
                     range=(0, 360),
@@ -505,6 +513,19 @@ class CameraWidget:
 
                 self._cartesian_to_polar()
 
+            if event == self.gui_autoroi:
+                print("Set ROI")
+                if self.maybe_image is None:
+                    # Skip rendering or use a default/placeholder image
+                    return  # Or handle appropriately
+
+                output = self.maybe_image[0].shape
+                self.config.roi_window_x = 0
+                self.config.roi_window_y = 0
+                self.config.roi_window_w = output[1]
+                self.config.roi_window_h = output[0]
+                self.main_config.save()
+
             if event == self.gui_refresh_button:
                 self.camera_list = list_camera_names()
                 window[self.gui_camera_addr].update(values=self.camera_list,size=(20,0))
@@ -552,8 +573,8 @@ class CameraWidget:
             #    if event == self.gui_mask_lighten:
             #       while True:
             #          try:
-            #             maybe_image = self.roi_queue.get(block=False)
-            #            imgbytes = cv2.imencode(".ppm", maybe_image[0])[1].tobytes()
+            #             self.maybe_image = self.roi_queue.get(block=False)
+            #            imgbytes = cv2.imencode(".ppm", self.maybe_image[0])[1].tobytes()
             #           image = cv2.imdecode(
             #              np.frombuffer(imgbytes, np.uint8), cv2.IMREAD_COLOR
             #         )
@@ -571,10 +592,10 @@ class CameraWidget:
                 try:
                     if self.roi_queue.empty():
                         self.capture_event.set()
-                    maybe_image = self.roi_queue.get(block=False)
+                    self.maybe_image = self.roi_queue.get(block=False)
 
-                    if maybe_image:
-                        image = maybe_image[0]
+                    if self.maybe_image:
+                        image = self.maybe_image[0]
 
                         img_h, img_w, _ = image.shape
 
@@ -625,9 +646,9 @@ class CameraWidget:
                             borderValue=(128, 128, 128),
                         )
 
-                        maybe_image = (image, *maybe_image[1:])
+                        self.maybe_image = (image, *self.maybe_image[1:])
 
-                    imgbytes = cv2.imencode(".ppm", maybe_image[0])[1].tobytes()
+                    imgbytes = cv2.imencode(".ppm", self.maybe_image[0])[1].tobytes()
                     graph = window[self.gui_roi_selection]
                     # INCREDIBLY IMPORTANT ERASE. Drawing images does NOT overwrite the buffer, the fucking
                     # graph keeps every image fed in until you call this. Therefore we have to make sure we
@@ -740,7 +761,7 @@ class CameraWidget:
             try:
                 window[self.gui_roi_message].update(visible=False)
                 window[self.gui_output_graph].update(visible=False)
-                (maybe_image, eye_info) = self.image_queue.get(block=False)
+                (self.maybe_image, eye_info) = self.image_queue.get(block=False)
 
             except Empty:
                 pass
