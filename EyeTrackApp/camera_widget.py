@@ -317,6 +317,17 @@ class CameraWidget:
     def started(self):
         return not self.cancellation_event.is_set()
 
+    def clear_queues(self):
+        if self.capture_queue.qsize() > 0:
+            with self.capture_queue.mutex:
+                self.capture_queue.queue.clear()
+        if self.roi_queue.qsize() > 0:
+            with self.roi_queue.mutex:
+                self.roi_queue.queue.clear()
+        if self.image_queue.qsize() > 0:
+            with self.image_queue.mutex:
+                self.image_queue.queue.clear()
+
     def start(self):
         # If we're already running, bail
         if not self.cancellation_event.is_set():
@@ -324,6 +335,11 @@ class CameraWidget:
         self.cancellation_event.clear()
         self.ransac_thread = Thread(target=self.ransac.run)
         self.ransac_thread.start()
+        # If the thread is still alive when we get back now block/wait without timeout
+        if self.camera_thread is not None and self.camera_thread.is_alive():
+            self.camera.camera_status = CameraState.CONNECTING  # TODO: Add a new state that lets user know whats going on?
+            self.camera_thread.join()
+            self.clear_queues()
         self.camera_thread = Thread(target=self.camera.run)
         self.camera_thread.start()
 
@@ -333,7 +349,10 @@ class CameraWidget:
             return
         self.cancellation_event.set()
         self.ransac_thread.join()
-        self.camera_thread.join()
+        self.camera_thread.join(0.2)    # Timeout so we don't block tab change for "cv_ffmpeg_open_timeout"/"cv_ffmpeg_read_timeout" milliseconds
+        if self.camera_thread is None or not self.camera_thread.is_alive():
+            self.clear_queues()
+        self.capture_process.clear()
 
     def on_config_update(self, data):
         keys = set(data.keys())
