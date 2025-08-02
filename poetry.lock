@@ -327,18 +327,6 @@ files = [
 ]
 
 [[package]]
-name = "freesimplegui"
-version = "5.1.1"
-description = "The free-forever Python GUI framework."
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "FreeSimpleGUI-5.1.1-py3-none-any.whl", hash = "sha256:d7629d5c94b55264d119bd2a89f52667d863ea7914d808e619aea29922ff842e"},
-    {file = "freesimplegui-5.1.1.tar.gz", hash = "sha256:2f0946c7ac221c997929181cbe7526e342fff5fc291a26d1d726287a5dd964fb"},
-]
-
-[[package]]
 name = "humanfriendly"
 version = "10.0"
 description = "Human friendly output for text interfaces using Python"
@@ -1271,6 +1259,18 @@ files = [
 cp2110 = ["hidapi"]
 
 [[package]]
+name = "freesimplegui"
+version = "5.2.0.post1"
+description = "The free-forever Python GUI framework."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "freesimplegui-5.2.0.post1-py3-none-any.whl", hash = "sha256:3d61eb519324503232f86b2f1bd7f5c6813ce225f6e189d0fd737ddb036af4d5"},
+    {file = "freesimplegui-5.2.0.post1.tar.gz", hash = "sha256:e58a0e6758e9a9e87152256911f94fcc3998356d1309973a9f4d9df2dc55f98a"},
+]
+
+[[package]]
 name = "pytest"
 version = "8.4.1"
 description = "pytest: simple powerful testing with Python"
@@ -1650,21 +1650,6 @@ brotli = ["brotli (>=1.0.9) ; platform_python_implementation == \"CPython\"", "b
 h2 = ["h2 (>=4,<5)"]
 socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
-
-[[package]]
-name = "wheel"
-version = "0.45.1"
-description = "A built-package format for Python"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "wheel-0.45.1-py3-none-any.whl", hash = "sha256:708e7481cc80179af0e556bbf0cc00b8444c7321e2700b8d8580231d13017248"},
-    {file = "wheel-0.45.1.tar.gz", hash = "sha256:661e1abd9198507b1409a20c02106d9670b2576e916d58f520316666abca6729"},
-]
-
-[package.extras]
-test = ["pytest (>=6.0.0)", "setuptools (>=65)"]
 
 [[package]]
 name = "winotify"
